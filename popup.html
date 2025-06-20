@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      color: #4285f4;
+      margin: 0;
+    }
+    
+    .info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .shortcut {
+      background: #e8f0fe;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      font-family: monospace;
+      font-weight: bold;
+      color: #1a73e8;
+    }
+    
+    .instructions {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #5f6368;
+    }
+    
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 12px;
+      margin-top: 15px;
+    }
+    
+    .status.active {
+      background: #e8f5e8;
+      color: #137333;
+    }
+    
+    .status.inactive {
+      background: #fce8e6;
+      color: #d93025;
+    }
+    
+    .toggle-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .toggle-label {
+      flex: 1;
+    }
+    
+    .toggle-description {
+      font-size: 12px;
+      color: #5f6368;
+      margin-top: 4px;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #4285f4;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>BigQuery Smart Execute</h1>
+  </div>
+  
+  <div class="info">
+    <div class="instructions">
+      Execute SQL queries in BigQuery with smart cursor detection - no manual selection needed!
+    </div>
+  </div>
+  
+  <div class="shortcut">
+    Ctrl + Enter (or Cmd + Enter on Mac)
+  </div>
+  
+  <div class="info">
+    <div class="instructions">
+      <strong>Priority logic:</strong><br>
+      1. <strong>Manual selection</strong> → Executes selected text<br>
+      2. <strong>Single Query mode</strong> → Executes query under cursor<br>
+      3. <strong>Fallback</strong> → Executes all content<br><br>
+      
+      <strong>Usage:</strong> Press <strong>Ctrl+Enter</strong>
+    </div>
+  </div>
+
+  <div class="toggle-container">
+    <div class="toggle-label">
+      <strong>Single Query Mode</strong>
+      <div class="toggle-description">
+        Execute only the query under the cursor
+      </div>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="singleQueryToggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+
+  
+  <div id="status" class="status">
+    Checking status...
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 
