@@ -334,6 +334,9 @@ class BigQuerySmartExecute {
       button.title = `${originalTitle} (Smart Execute - Priority: Selection > Single Query > All)`;
     }
     
+    // Start monitoring button state changes for icon updates
+    this.startButtonStateMonitoring(button);
+    
     // Add subtle temporary border to indicate detection
     const originalBorder = button.style.border;
     const originalBoxShadow = button.style.boxShadow;
@@ -360,29 +363,52 @@ class BigQuerySmartExecute {
     
     const originalText = button.dataset.originalText;
     
-    // Determine new text based on mode
-    let newText;
-    if (this.singleQueryMode) {
-      // Single query mode: "Run current"
-      if (originalText.toLowerCase().includes('run')) {
-        newText = originalText.replace(/run/gi, 'Run current');
-      } else {
-        newText = 'Run current';
-      }
-    } else {
-      // Complete mode: "Run all"
-      if (originalText.toLowerCase().includes('run')) {
-        newText = originalText.replace(/run/gi, 'Run all');
-      } else {
-        newText = 'Run all';
+    // Multi-language run button text mappings
+    const runTextMappings = {
+      'en': { base: 'run', current: 'Run current', all: 'Run all' },
+      'fr': { base: 'exécuter', current: 'Exécuter actuel', all: 'Exécuter tout' },
+      'es': { base: 'ejecutar', current: 'Ejecutar actual', all: 'Ejecutar todo' },
+      'de': { base: 'ausführen', current: 'Aktuell ausführen', all: 'Alles ausführen' },
+      'it': { base: 'eseguire', current: 'Eseguire corrente', all: 'Eseguire tutto' },
+      'pt': { base: 'executar', current: 'Executar atual', all: 'Executar tudo' },
+      'nl': { base: 'uitvoeren', current: 'Huidige uitvoeren', all: 'Alles uitvoeren' },
+      'pl': { base: 'wykonaj', current: 'Wykonaj bieżący', all: 'Wykonaj wszystko' },
+      'ru': { base: 'выполнить', current: 'Выполнить текущий', all: 'Выполнить все' },
+      'ja': { base: '実行', current: '現在実行', all: 'すべて実行' },
+      'ko': { base: '실행', current: '현재 실행', all: '모두 실행' },
+      'zh': { base: '运行', current: '运行当前', all: '运行全部' },
+      'zh-tw': { base: '執行', current: '執行目前', all: '執行全部' },
+      'ar': { base: 'تشغيل', current: 'تشغيل الحالي', all: 'تشغيل الكل' }
+    };
+    
+    // Detect language based on original text
+    let detectedLang = 'en'; // default
+    const lowerOriginalText = originalText.toLowerCase().trim();
+    
+    for (const [lang, mapping] of Object.entries(runTextMappings)) {
+      if (lowerOriginalText.includes(mapping.base.toLowerCase())) {
+        detectedLang = lang;
+        break;
       }
     }
     
-    // Clean text to avoid duplicates
-    newText = newText.replace(/Run current current/gi, 'Run current')
-                   .replace(/Run all all/gi, 'Run all')
-                   .replace(/current all/gi, this.singleQueryMode ? 'current' : 'all')
-                   .replace(/all current/gi, this.singleQueryMode ? 'current' : 'all');
+    // Determine new text based on mode and detected language
+    let newText;
+    const mapping = runTextMappings[detectedLang];
+    
+    if (this.singleQueryMode) {
+      newText = mapping.current;
+    } else {
+      newText = mapping.all;
+    }
+    
+    // Preserve original casing and formatting if it was different
+    if (originalText !== originalText.toLowerCase()) {
+      // If original had special casing, try to preserve first letter case
+      if (originalText[0] === originalText[0].toUpperCase()) {
+        newText = newText.charAt(0).toUpperCase() + newText.slice(1);
+      }
+    }
     
     // Update text while preserving icons
     if (button.textContent !== newText) {
@@ -407,28 +433,112 @@ class BigQuerySmartExecute {
     const svgIcons = button.querySelectorAll('svg, .material-icons, [class*="icon"]');
     const preservedIcons = [];
     
-    // Clone and store icons with their original styles
+    // Clone and store icons with their original styles and context
     svgIcons.forEach(icon => {
       const clonedIcon = icon.cloneNode(true);
       
-      // Save original icon styles
+      // Get the computed color from the original icon in its context
       const originalIconStyles = getComputedStyle(icon);
+      const computedFill = originalIconStyles.fill;
+      const computedColor = originalIconStyles.color;
+      
+      // Preserve original classes and attributes for CSS inheritance
+      if (icon.className) {
+        // Handle SVG elements which have read-only className
+        try {
+          if (icon instanceof SVGElement) {
+            // For SVG elements, copy classList manually
+            if (icon.classList && icon.classList.length > 0) {
+              Array.from(icon.classList).forEach(cls => {
+                clonedIcon.classList.add(cls);
+              });
+            }
+          } else {
+            clonedIcon.className = icon.className;
+          }
+        } catch (e) {
+          // Fallback: copy class attribute directly
+          const classAttr = icon.getAttribute('class');
+          if (classAttr) {
+            clonedIcon.setAttribute('class', classAttr);
+          }
+        }
+      }
+      
+      // Copy all original attributes that might affect styling
+      Array.from(icon.attributes).forEach(attr => {
+        if (attr.name !== 'style') { // Don't copy inline styles, we'll handle those separately
+          clonedIcon.setAttribute(attr.name, attr.value);
+        }
+      });
       
       // Apply spacing and positioning
       clonedIcon.style.marginRight = '6px';
       clonedIcon.style.verticalAlign = 'middle';
       clonedIcon.style.display = 'inline-block';
       
-      // Preserve icon color - try multiple methods
-      clonedIcon.style.fill = originalIconStyles.fill || 'currentColor';
-      clonedIcon.style.color = originalIconStyles.color || 'inherit';
+      // Check if button is actually disabled
+      const isButtonDisabled = button.disabled || 
+                               button.hasAttribute('aria-disabled') ||
+                               button.classList.contains('mat-mdc-button-disabled') ||
+                               button.classList.contains('cm-disabled') ||
+                               button.getAttribute('aria-disabled') === 'true';
       
-      // For SVG, make sure path elements inherit color correctly
+      if (isButtonDisabled) {
+        // Button is disabled - keep the disabled/grey color
+        if (computedFill && computedFill !== 'none' && computedFill !== 'rgba(0, 0, 0, 0)') {
+          clonedIcon.style.fill = computedFill;
+        } else if (computedColor && computedColor !== 'rgba(0, 0, 0, 0)') {
+          clonedIcon.style.fill = computedColor;
+        } else {
+          // Fallback to standard disabled color
+          clonedIcon.style.fill = 'rgba(60, 64, 67, 0.38)';
+        }
+      } else {
+        // Button is enabled - use proper active colors
+        const isDisabledColor = computedFill && (
+          computedFill.includes('0.38') ||  // Common disabled opacity
+          computedFill.includes('rgba(60, 64, 67, 0.38)') || // Google Material disabled color
+          computedFill === 'rgb(60, 64, 67)' // Grey color
+        );
+        
+        if (computedFill && computedFill !== 'none' && computedFill !== 'rgba(0, 0, 0, 0)' && !isDisabledColor) {
+          clonedIcon.style.fill = computedFill;
+        } else if (computedColor && computedColor !== 'rgba(0, 0, 0, 0)' && !computedColor.includes('0.38')) {
+          clonedIcon.style.fill = computedColor;
+        } else {
+          // Use button's active text color or force white for primary buttons
+          const buttonStyles = getComputedStyle(button);
+          const buttonColor = buttonStyles.color;
+          
+          // For primary buttons or buttons with primary class, force white
+          if (button.classList.contains('mat-primary') || 
+              button.getAttribute('color') === 'primary' ||
+              buttonStyles.backgroundColor.includes('rgb(66, 133, 244)')) { // Google blue
+            clonedIcon.style.fill = 'white';
+          } else if (buttonColor && buttonColor !== 'rgba(0, 0, 0, 0)') {
+            clonedIcon.style.fill = buttonColor;
+          } else {
+            clonedIcon.style.fill = 'currentColor';
+          }
+        }
+      }
+      
+      // For SVG, ensure path elements inherit the correct color
       if (clonedIcon.tagName === 'svg') {
         const paths = clonedIcon.querySelectorAll('path');
         paths.forEach(path => {
-          if (!path.getAttribute('fill') || path.getAttribute('fill') === 'currentColor') {
-            path.style.fill = 'currentColor';
+          if (!isButtonDisabled) {
+            // Button is enabled - remove any existing grey/disabled fill styles
+            if (path.style.fill && (path.style.fill.includes('0.38') || path.style.fill === 'currentcolor')) {
+              path.style.fill = '';
+            }
+          }
+          
+          // If path doesn't have explicit fill, make it inherit from svg
+          const pathFill = path.getAttribute('fill');
+          if (!pathFill || pathFill === 'currentColor' || pathFill === 'currentcolor') {
+            path.style.fill = 'inherit';
           }
         });
       }
@@ -457,19 +567,114 @@ class BigQuerySmartExecute {
     }
   }
 
+  startButtonStateMonitoring(button) {
+    // Avoid multiple observers on the same button
+    if (button.dataset.stateMonitoring) {
+      return;
+    }
+    button.dataset.stateMonitoring = 'true';
+    
+    // Store initial state
+    let lastDisabledState = this.isButtonDisabled(button);
+    
+    // Create mutation observer to watch for state changes
+    const observer = new MutationObserver((mutations) => {
+      let stateChanged = false;
+      
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes') {
+          const attributeName = mutation.attributeName;
+          // Watch for changes in disabled-related attributes
+          if (attributeName === 'disabled' || 
+              attributeName === 'aria-disabled' || 
+              attributeName === 'class') {
+            stateChanged = true;
+          }
+        }
+      });
+      
+      if (stateChanged) {
+        const currentDisabledState = this.isButtonDisabled(button);
+        if (currentDisabledState !== lastDisabledState) {
+          this.updateButtonIconState(button);
+          lastDisabledState = currentDisabledState;
+        }
+      }
+    });
+    
+    // Start observing
+    observer.observe(button, {
+      attributes: true,
+      attributeFilter: ['disabled', 'aria-disabled', 'class']
+    });
+    
+    // Store observer reference for cleanup
+    button._stateObserver = observer;
+  }
+
+  isButtonDisabled(button) {
+    return button.disabled || 
+           button.hasAttribute('aria-disabled') ||
+           button.classList.contains('mat-mdc-button-disabled') ||
+           button.classList.contains('cm-disabled') ||
+           button.getAttribute('aria-disabled') === 'true';
+  }
+
+  updateButtonIconState(button) {
+    // Find the icon in the button
+    const icon = button.querySelector('svg[data-icon-name="playIcon"]');
+    if (!icon) return;
+    
+    const isDisabled = this.isButtonDisabled(button);
+    
+    if (isDisabled) {
+      // Button is disabled - set grey color
+      icon.style.fill = 'rgba(60, 64, 67, 0.38)';
+    } else {
+      // Button is enabled - set white color for primary buttons
+      const buttonStyles = getComputedStyle(button);
+      if (button.classList.contains('mat-primary') || 
+          button.getAttribute('color') === 'primary' ||
+          buttonStyles.backgroundColor.includes('rgb(66, 133, 244)')) {
+        icon.style.fill = 'white';
+      } else {
+        icon.style.fill = 'currentColor';
+      }
+    }
+    
+    // Also update path elements
+    const paths = icon.querySelectorAll('path');
+    paths.forEach(path => {
+      path.style.fill = 'inherit';
+    });
+  }
+
   updateAllRunButtons() {
     // Update all intercepted Run buttons
     const interceptedButtons = document.querySelectorAll('[data-smart-execute-intercepted="true"]');
+    
     interceptedButtons.forEach(button => {
       this.updateRunButtonText(button);
     });
     
-    // If no button found, try to find and update current Run button
-    if (interceptedButtons.length === 0) {
-      const currentRunButton = this.findRunButton();
-      if (currentRunButton) {
-        this.updateRunButtonText(currentRunButton);
+    // Always try to find and update current Run button (in case interception is slow)
+    const currentRunButton = this.findRunButton(true); // Silent mode - only log when successful
+    if (currentRunButton) {
+      this.updateRunButtonText(currentRunButton);
+      
+      // If this button isn't intercepted yet, intercept it now
+      if (!currentRunButton.dataset.smartExecuteIntercepted) {
+        this.findAndInterceptRunButton();
       }
+    } else {
+      // Retry after a short delay in case the UI is still loading
+      setTimeout(() => {
+        const retryButton = this.findRunButton(true); // Silent mode for retry
+        if (retryButton) {
+          this.updateRunButtonText(retryButton);
+          this.findAndInterceptRunButton();
+        }
+      }, 1000);
     }
   }
 
@@ -684,51 +889,132 @@ class BigQuerySmartExecute {
 
   findRunButton() {
     
-    // Search for "Run" button in BigQuery interface
-    const selectors = [
-      'button[data-testid="run-button"]',
-      'button[aria-label*="Run"]',
-      'button[aria-label*="run"]',
-      'button[title*="Run"]',
-      'button[title*="run"]',
-      '.run-button',
-      '[data-tooltip*="Run"]',
-      '[data-tooltip*="run"]',
-      'button[data-value="run"]'
+    // Priority 1: Use BigQuery's language-independent attributes (most reliable)
+    const reliableSelectors = [
+      // BigQuery instrumentation ID - most reliable across all languages
+      'cfc-progress-button[instrumentationid="bq-run-query-button"] button',
+      '[instrumentationid="bq-run-query-button"] button',
+      
+      // BigQuery test class - reliable for testing environments
+      'button.bqui-test-run-query',
+      '.bqui-test-run-query',
+      
+      // BigQuery component classes
+      '.cfc-shared-query-run-button button',
+      'cfc-progress-button.cfc-shared-query-run-button button',
+      
+      // Combination of BigQuery classes
+      'button.bqui-test-run-query.mat-primary',
+      'button[class*="bqui-test-run-query"]',
+      
+      // Additional fallback selectors
+      'button[jslog="100338"]', // BigQuery specific jslog attribute
+      'button[cfciamcheck="bigquery.jobs.create"]' // BigQuery IAM check attribute
     ];
     
-    for (const selector of selectors) {
+    for (const selector of reliableSelectors) {
       const button = document.querySelector(selector);
       if (button && button.offsetParent !== null) { // Check that button is visible
         return button;
+      } else if (button) {
       }
     }
     
-    // Search by text in all buttons
-    const buttons = document.querySelectorAll('button, [role="button"], .mdc-button');
-    for (const button of buttons) {
-      const text = button.textContent?.toLowerCase() || '';
-      const ariaLabel = button.getAttribute('aria-label')?.toLowerCase() || '';
-      const title = button.getAttribute('title')?.toLowerCase() || '';
-      
-      if ((text.includes('run') || ariaLabel.includes('run') || title.includes('run')) && 
-          button.offsetParent !== null) {
-        return button;
-      }
-    }
+    // Priority 2: Search by BigQuery's play icon (language-independent visual cue)
+    const playIconSelectors = [
+      // BigQuery uses specific play icon with data-icon-name
+      'svg[data-icon-name="playIcon"]',
+      'cm-icon svg[data-icon-name="playIcon"]'
+    ];
     
-    // Search specifically for buttons with play icon (triangle)
-    const iconButtons = document.querySelectorAll('button mat-icon, button i, [role="button"] mat-icon');
-    for (const icon of iconButtons) {
-      const iconText = icon.textContent?.toLowerCase() || '';
-      const iconClass = icon.className?.toLowerCase() || '';
-      
-      if (iconText.includes('play') || iconClass.includes('play') || 
-          iconText.includes('arrow') || iconClass.includes('arrow')) {
+    for (const selector of playIconSelectors) {
+      const icon = document.querySelector(selector);
+      if (icon) {
+        // Find the parent button
         const button = icon.closest('button') || icon.closest('[role="button"]');
         if (button && button.offsetParent !== null) {
           return button;
+        } else if (button) {
         }
+      }
+    }
+    
+    // Priority 3: Search by structural context (BigQuery toolbar structure)
+    const structuralSelectors = [
+      // Look for buttons in BigQuery's action bar with Material Design classes
+      '.cfc-action-bar-content-main button.mat-primary[color="primary"]',
+      'mat-toolbar button.mat-primary.mdc-button--unelevated',
+      '.cfc-action-bar-toolbar-container button.mat-primary',
+      // Additional structural patterns
+      '.cfc-action-bar-content-main button[color="primary"]',
+      'mat-toolbar button[color="primary"]'
+    ];
+    
+    for (const selector of structuralSelectors) {
+      const buttons = document.querySelectorAll(selector);
+      for (const button of buttons) {
+        // Check if this button has a play icon
+        const hasPlayIcon = button.querySelector('svg[data-icon-name="playIcon"]');
+        if (hasPlayIcon && button.offsetParent !== null) {
+          return button;
+        }
+      }
+    }
+    
+    // Priority 4: Multi-language text fallback (as last resort)
+    const runTexts = {
+      'en': ['run', 'execute'],
+      'fr': ['exécuter', 'executer', 'lancer'],
+      'es': ['ejecutar', 'ejecute', 'correr'],
+      'de': ['ausführen', 'ausfuhren', 'laufen'],
+      'it': ['eseguire', 'esegui', 'correre'],
+      'pt': ['executar', 'execute', 'correr'],
+      'nl': ['uitvoeren', 'voer uit', 'draaien'],
+      'pl': ['wykonaj', 'uruchom', 'wykonać'],
+      'ru': ['выполнить', 'запустить', 'выполни'],
+      'ja': ['実行', '実行する', 'じっこう'],
+      'ko': ['실행', '실행하다', '수행'],
+      'zh': ['运行', '执行', '運行'],
+      'zh-tw': ['執行', '運行', '執行'],
+      'ar': ['تشغيل', 'تنفيذ', 'يركض']
+    };
+    
+    const allRunTexts = Object.values(runTexts).flat();
+    
+    const buttons = document.querySelectorAll('button, [role="button"], .mdc-button');
+    for (const button of buttons) {
+      const text = (button.textContent || button.innerText || '').toLowerCase().trim();
+      const ariaLabel = (button.getAttribute('aria-label') || '').toLowerCase();
+      const title = (button.getAttribute('title') || '').toLowerCase();
+      
+      // Check if any of the run texts match
+      const textMatches = allRunTexts.some(runText => 
+        text.includes(runText.toLowerCase()) || 
+        ariaLabel.includes(runText.toLowerCase()) || 
+        title.includes(runText.toLowerCase())
+      );
+      
+      if (textMatches && button.offsetParent !== null) {
+        // Additional validation: should be in a toolbar or have primary styling
+        const isInToolbar = button.closest('mat-toolbar, .cfc-action-bar, [role="toolbar"]');
+        const isPrimary = button.classList.contains('mat-primary') || 
+                         button.classList.contains('primary') ||
+                         button.getAttribute('color') === 'primary';
+        
+        if (isInToolbar || isPrimary) {
+          
+          return button;
+        }
+      }
+    }
+    
+    // Final fallback: Look for any button with play icon, regardless of structure
+    const allPlayIcons = document.querySelectorAll('svg[data-icon-name="playIcon"]');
+    
+    for (const icon of allPlayIcons) {
+      const button = icon.closest('button');
+      if (button && button.offsetParent !== null) {
+        return button;
       }
     }
     
@@ -756,13 +1042,15 @@ style.textContent = `
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 12px;
-    z-index: 10000;
+    z-index: 1000;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.3s;
   }
   
   .bq-smart-execute-indicator.show {
     opacity: 1;
+    pointer-events: auto;
   }
 `;
 document.head.appendChild(style);
@@ -779,8 +1067,21 @@ function showMessage(text, duration = 2000) {
   indicator.textContent = text;
   indicator.classList.add('show');
   
-  setTimeout(() => {
+  // Clear any existing timeout
+  if (indicator.hideTimeout) {
+    clearTimeout(indicator.hideTimeout);
+  }
+  
+  // Set new timeout to hide
+  indicator.hideTimeout = setTimeout(() => {
     indicator.classList.remove('show');
+    
+    // Clean up the element after transition completes
+    setTimeout(() => {
+      if (indicator && indicator.parentNode && !indicator.classList.contains('show')) {
+        indicator.parentNode.removeChild(indicator);
+      }
+    }, 500); // Wait for transition to complete
   }, duration);
 }
 
