@@ -1,0 +1,100 @@
+test1:
+  - from_line: 1
+    to_line: 1
+    from_column: 1
+    to_column: 21
+    expected_query: select * from users
+  - from_line: 2
+    to_line: 2
+    from_column: 1
+    to_column: 22
+    expected_query: select * from orders
+  - from_line: 3
+    to_line: 3
+    from_column: 1
+    to_column: 24
+    expected_query: select * from products
+  - from_line: 4
+    to_line: 5
+    from_column: 1
+    to_column: 1
+    expected_query: select * from customers
+test2:
+  - from_line: 1
+    to_line: 2
+    from_column: 1
+    to_column: 2
+    expected_query: select * from users
+  - from_line: 3
+    to_line: 7
+    from_column: 1
+    to_column: 1
+    expected_query: select * from orders
+test3:
+  - from_line: 1
+    to_line: 2
+    from_column: 1
+    to_column: 2
+    expected_query: select * from users
+  - from_line: 3
+    to_line: 5
+    from_column: 1
+    to_column: 4
+    expected_query: select * from orders
+  - from_line: 6
+    to_line: 7
+    from_column: 1
+    to_column: 20
+    expected_query: select * from trips
+test4:
+  - from_line: 1
+    to_line: 2
+    from_column: 1
+    to_column: 2
+    expected_query: select * from users
+  - from_line: 3
+    to_line: 8
+    from_column: 1
+    to_column: 3
+    expected_query: select * from orders
+test5:
+  - from_line: 1
+    to_line: 5
+    from_column: 1
+    to_column: 2
+    expected_query: |
+      with source as (
+        select 1
+      )
+      select * from source
+  - from_line: 6
+    to_line: 8
+    from_column: 1
+    to_column: 18
+    expected_query: select * from orders
+test6:
+  - from_line: 1
+    to_line: 1
+    from_column: 1
+    to_column: 22
+    expected_query: select * from source
+  - from_line: 1
+    to_line: 1
+    from_column: 23
+    to_column: 42
+    expected_query: select * from users
+  - from_line: 1
+    to_line: 2
+    from_column: 43
+    to_column: 20
+    expected_query: select * from orders
+  - from_line: 3
+    to_line: 4
+    from_column: 1
+    to_column: 23
+    expected_query: select * from trips
+  - from_line: 4
+    to_line: 4
+    from_column: 24
+    to_column: 48
+    expected_query: select * from selections
