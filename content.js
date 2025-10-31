@@ -718,62 +718,8 @@ class BigQuerySmartExecute {
   }
 
   findCurrentQueryInText(text, cursorPosition) {
-    
-    // Convert cursor position to approximate line/column
-    const textBeforeCursor = text.substring(0, cursorPosition);
-    const lines = text.split('\n');
-    const linesBeforeCursor = textBeforeCursor.split('\n');
-    const currentLineIndex = linesBeforeCursor.length - 1;
-    
-    // Find start and end of current query
-    let startLine = currentLineIndex;
-    let endLine = currentLineIndex;
-    
-    // Search upward to find query start
-    for (let i = currentLineIndex; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (line.endsWith(';')) {
-        if (i < currentLineIndex) {
-          startLine = i + 1;
-          break;
-        }
-      }
-      if (i === 0) {
-        startLine = 0;
-      }
-    }
-    
-    // Search downward to find query end
-    for (let i = currentLineIndex; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.endsWith(';')) {
-        endLine = i;
-        break;
-      }
-      if (i === lines.length - 1) {
-        endLine = i;
-      }
-    }
-    
-    // Extract query text
-    const queryLines = lines.slice(startLine, endLine + 1);
-    const queryText = queryLines.join('\n').trim();
-    
-    if (queryText && (queryText.toLowerCase().includes('select') || 
-                      queryText.toLowerCase().includes('with') ||
-                      queryText.toLowerCase().includes('insert') ||
-                      queryText.toLowerCase().includes('update') ||
-                      queryText.toLowerCase().includes('delete'))) {
-      return {
-        text: queryText,
-        startLine: startLine,
-        endLine: endLine,
-        startPosition: lines.slice(0, startLine).join('\n').length + (startLine > 0 ? 1 : 0),
-        endPosition: lines.slice(0, endLine + 1).join('\n').length
-      };
-    }
-    
-    return null;
+    // Use the external QueryDetection module
+    return QueryDetection.findCurrentQueryInText(text, cursorPosition);
   }
 
   selectTextInEditor(queryInfo) {

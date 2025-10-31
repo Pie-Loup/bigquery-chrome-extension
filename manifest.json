@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BigQuery Smart Execute",
-  "version": "1.11",
+  "version": "1.2",
   "description": "Execute current SQL query in BigQuery without manual selection",
   
   "permissions": [
@@ -14,7 +14,7 @@
       "matches": [
         "https://console.cloud.google.com/bigquery*"
       ],
-      "js": ["content.js"],
+      "js": ["queryDetection.js", "content.js"],
       "run_at": "document_end"
     }
   ],

@@ -1,0 +1,25 @@
+{
+  "name": "bigquery-smart-execute",
+  "version": "1.0.0",
+  "description": "Chrome extension for smart BigQuery query execution",
+  "main": "queryDetection.js",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:query-detection",
+    "test:query-detection": "node tests/testQueryDetection.js",
+    "test:unit": "node testRunner.js",
+    "test:watch": "nodemon testRunner.js",
+    "test:verbose": "node testRunner.js --verbose"
+  },
+  "keywords": ["bigquery", "chrome-extension", "sql", "query-detection"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
